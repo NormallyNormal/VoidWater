@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "package": "com.normallynormal.void_water.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "EntityMixin",
+    "LevelMixin",
+    "ServerGamePacketListenerImplMixin"
+  ],
+  "client": [
+    "LiquidBlockRendererMixin",
+    "ItemBlockRenderTypesMixin",
+    "SectionRendererDispatcherMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
