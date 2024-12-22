@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 @Mixin(Level.class)
 public class LevelMixin {
-    @ModifyVariable(method = "getFluidState", at = @At("HEAD"), ordinal = 0)
+    @ModifyVariable(method = "getFluidState", at = @At("HEAD"))
     private BlockPos injected(BlockPos y) {
         int minY = Util.getMinYForLevel((Level) (Object) this);
         if (y.getY() < minY) {

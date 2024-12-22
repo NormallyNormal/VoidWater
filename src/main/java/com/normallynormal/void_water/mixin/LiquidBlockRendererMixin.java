@@ -19,6 +19,8 @@ import net.neoforged.neoforge.client.textures.FluidSpriteCache;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -27,12 +29,32 @@ import static net.minecraft.client.renderer.block.LiquidBlockRenderer.shouldRend
 @Mixin(LiquidBlockRenderer.class)
 public abstract class LiquidBlockRendererMixin {
 
-    @Inject(method = "shouldRenderFace", at = @At("HEAD"), cancellable = true)
-    private static void onShouldRenderFace(BlockAndTintGetter level, BlockPos pos, FluidState fluidState, BlockState blockState, Direction side, FluidState neighborFluid, CallbackInfoReturnable<Boolean> cir) {
-        int minY = Util.getMinYForLevel();
-        if (pos.getY() <= minY && side == Direction.DOWN) {
-            cir.setReturnValue(false);
+//    @Inject(method = "shouldRenderFace", at = @At("HEAD"), cancellable = true)
+//    private static void onShouldRenderFace(FluidState fluidState, BlockState blockState, Direction side, FluidState neighborFluid, CallbackInfoReturnable<Boolean> cir) {
+//        fluidState.
+//        int minY = Util.getMinYForLevel();
+//        if (pos.getY() <= minY && side == Direction.DOWN) {
+//            cir.setReturnValue(false);
+//        }
+//    }
+    @ModifyVariable(
+            method = "tesselate",
+            at = @At(value = "STORE"),
+            ordinal = 1,
+            require = 1
+    )
+    private boolean modifyFlag2(
+            boolean originalFlag2,
+            BlockAndTintGetter level,
+            BlockPos pos,
+            VertexConsumer buffer,
+            BlockState blockState,
+            FluidState fluidState
+    ) {
+        if (pos.getY() == Util.getMinYForLevel()) {
+            return false;
         }
+        return originalFlag2;
     }
 
     @Inject(method = "tesselate", at = @At("HEAD"))
@@ -58,10 +80,10 @@ public abstract class LiquidBlockRendererMixin {
             FluidState fluidstate4 = blockstate4.getFluidState();
             BlockState blockstate5 = level.getBlockState(pos.relative(Direction.EAST));
             FluidState fluidstate5 = blockstate5.getFluidState();
-            boolean flag3 = shouldRenderFace(level, pos, fluidState, blockState, Direction.NORTH, fluidstate2);
-            boolean flag4 = shouldRenderFace(level, pos, fluidState, blockState, Direction.SOUTH, fluidstate3);
-            boolean flag5 = shouldRenderFace(level, pos, fluidState, blockState, Direction.WEST, fluidstate4);
-            boolean flag6 = shouldRenderFace(level, pos, fluidState, blockState, Direction.EAST, fluidstate5);
+            boolean flag3 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.NORTH, fluidstate2);
+            boolean flag4 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.NORTH, fluidstate2);
+            boolean flag5 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.NORTH, fluidstate2);
+            boolean flag6 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.NORTH, fluidstate2);
             float f36 = (float)(pos.getX() & 15);
             float f37 = (float)(pos.getY() & 15);
             float f38 = (float)(pos.getZ() & 15);
@@ -174,7 +196,7 @@ public abstract class LiquidBlockRendererMixin {
     private static boolean isFaceOccludedByState(BlockGetter level, Direction face, float height, BlockPos pos, BlockState state) {
         if (state.canOcclude()) {
             VoxelShape voxelshape = Shapes.box(0.0, 0.0, 0.0, 1.0, (double)height, 1.0);
-            VoxelShape voxelshape1 = state.getOcclusionShape(level, pos);
+            VoxelShape voxelshape1 = state.getOcclusionShape();
             return Shapes.blockOccudes(voxelshape, voxelshape1, face);
         } else {
             return false;
