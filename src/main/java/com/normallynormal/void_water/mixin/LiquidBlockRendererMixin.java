@@ -40,7 +40,7 @@ public abstract class LiquidBlockRendererMixin {
     @ModifyVariable(
             method = "tesselate",
             at = @At(value = "STORE"),
-            ordinal = 1,
+            ordinal = 2,
             require = 1
     )
     private boolean modifyFlag2(
@@ -81,9 +81,9 @@ public abstract class LiquidBlockRendererMixin {
             BlockState blockstate5 = level.getBlockState(pos.relative(Direction.EAST));
             FluidState fluidstate5 = blockstate5.getFluidState();
             boolean flag3 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.NORTH, fluidstate2);
-            boolean flag4 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.NORTH, fluidstate2);
-            boolean flag5 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.NORTH, fluidstate2);
-            boolean flag6 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.NORTH, fluidstate2);
+            boolean flag4 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.SOUTH, fluidstate3);
+            boolean flag5 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.WEST, fluidstate4);
+            boolean flag6 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.EAST, fluidstate5);
             float f36 = (float)(pos.getX() & 15);
             float f37 = (float)(pos.getY() & 15);
             float f38 = (float)(pos.getZ() & 15);

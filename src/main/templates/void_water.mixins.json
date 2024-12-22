@@ -5,7 +5,8 @@
   "mixins": [
     "EntityMixin",
     "LevelMixin",
-    "ServerGamePacketListenerImplMixin"
+    "ServerGamePacketListenerImplMixin",
+    "EntityInvoker"
   ],
   "client": [
     "LiquidBlockRendererMixin",
