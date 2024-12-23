@@ -28,18 +28,6 @@ import java.util.TreeSet;
 
 @Mixin(Entity.class)
 public class EntityMixin {
-    public class ReflectionUtils {
-        public static Object getFieldValue(Object instance, String fieldName) {
-            try {
-                Field field = instance.getClass().getDeclaredField(fieldName);
-                field.setAccessible(true);
-                return field.get(instance);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to access field: " + fieldName, e);
-            }
-        }
-    }
-
     @Shadow
     private BlockPos blockPosition;
 
