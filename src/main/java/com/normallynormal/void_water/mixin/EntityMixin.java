@@ -1,5 +1,6 @@
 package com.normallynormal.void_water.mixin;
 
+import com.normallynormal.void_water.Config;
 import com.normallynormal.void_water.InterimCalculation;
 import com.normallynormal.void_water.Util;
 import net.minecraft.core.BlockPos;
@@ -67,7 +68,7 @@ public class EntityMixin {
 
         Set<FluidType> fluidsIn = new HashSet<>();
 
-        if (entityTop < levelFloor) {
+        if (entityTop < levelFloor && entityTop > levelFloor - Config.trailLength) {
             for (int x = entityMinX; x < entityMaxX; x++) {
                 for (int z = entityMinZ; z < entityMaxZ; z++) {
                     mutableBlockPos.set(x, levelFloor, z);
@@ -85,88 +86,10 @@ public class EntityMixin {
         }
     }
 
-//    @Overwrite
-//    public void updateFluidHeightAndDoFluidPushing() {
-//        if (((Entity)(Object)this).touchingUnloadedChunk()) {
-//            return;
-//        } else {
-//            AABB aabb = ((Entity)(Object)this).getBoundingBox().deflate(0.001);
-//            int i = Mth.floor(aabb.minX);
-//            int j = Mth.ceil(aabb.maxX);
-//            int k = Mth.floor(aabb.minY);
-//            int l = Mth.ceil(aabb.maxY);
-//            int i1 = Mth.floor(aabb.minZ);
-//            int j1 = Mth.ceil(aabb.maxZ);
-//            double d0 = 0.0;
-//            boolean flag = ((Entity)(Object)this).isPushedByFluid();
-//            boolean flag1 = false;
-//            Vec3 vec3 = Vec3.ZERO;
-//            int k1 = 0;
-//            BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-//            it.unimi.dsi.fastutil.objects.Object2ObjectMap<net.neoforged.neoforge.fluids.FluidType, InterimCalculation> interimCalcs = null;
-//            int levelFloor = Util.getMinYForLevel(this.level());
-//
-//            for (int l1 = i; l1 < j; l1++) {
-//                for (int i2 = k; i2 < l; i2++) {
-//                    for (int j2 = i1; j2 < j1; j2++) {
-//                        blockpos$mutableblockpos.set(l1, i2, j2);
-//                        FluidState fluidstate = this.level().getFluidState(blockpos$mutableblockpos);
-//                        net.neoforged.neoforge.fluids.FluidType fluidType = fluidstate.getFluidType();
-//                        if (!fluidType.isAir()) {
-//                            double d1 = (double)((float)i2 + fluidstate.getHeight(this.level(), blockpos$mutableblockpos));
-//                            if (d1 >= aabb.minY) {
-//                                flag1 = true;
-//                                if (interimCalcs == null) {
-//                                    interimCalcs = new it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap<>();
-//                                }
-//                                InterimCalculation interim = interimCalcs.computeIfAbsent(fluidType, t -> new InterimCalculation());
-//                                interim.fluidHeight = Math.max(d1 - aabb.minY, interim.fluidHeight);
-//                                if (((Entity)(Object)this).isPushedByFluid(fluidType)) {
-//                                    Vec3 vec31 = fluidstate.getFlow(this.level(), blockpos$mutableblockpos);
-//                                    if (interim.fluidHeight < 0.4D) {
-//                                        vec31 = vec31.scale(interim.fluidHeight);
-//                                    }
-//
-//                                    interim.flowVector = interim.flowVector.add(vec31);
-//                                    interim.blockCount++;
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//
-//            if(interimCalcs != null) {
-//                interimCalcs.forEach((fluidType, interim) -> {
-//                    if (interim.flowVector.length() > 0.0D) {
-//                        if (interim.blockCount > 0) {
-//                            interim.flowVector = interim.flowVector.scale(1.0D / (double)interim.blockCount);
-//                        }
-//
-//                        if (!(((Entity)(Object)this) instanceof Player)) {
-//                            interim.flowVector = interim.flowVector.normalize();
-//                        }
-//
-//                        Vec3 vec32 = this.getDeltaMovement();
-//                        interim.flowVector = interim.flowVector.scale(((Entity)(Object)this).getFluidMotionScale(fluidType));
-//                        double d2 = 0.003;
-//                        if (Math.abs(vec32.x) < 0.003D && Math.abs(vec32.z) < 0.003D && interim.flowVector.length() < 0.0045000000000000005D) {
-//                            interim.flowVector = interim.flowVector.normalize().scale(0.0045000000000000005D);
-//                        }
-//
-//                        this.setDeltaMovement(this.getDeltaMovement().add(interim.flowVector));
-//                    }
-//
-//                    ((EntityInvoker)(Object)this).invokeSetFluidTypeHeight(fluidType, interim.fluidHeight);
-//                });
-//            }
-//        }
-//    }
-
     @ModifyVariable(method = "updateFluidOnEyes()V", at = @At("STORE"), ordinal = 0)
     private double modifyD0(double d0) {
         int minY = Util.getMinYForLevel(this.level());
-        if (d0 < minY) {
+        if (d0 < minY && d0 > minY - Config.trailLength) {
             return minY + 0.01;
         }
         return d0;

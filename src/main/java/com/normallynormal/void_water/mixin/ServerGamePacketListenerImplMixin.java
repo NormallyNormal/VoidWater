@@ -1,5 +1,6 @@
 package com.normallynormal.void_water.mixin;
 
+import com.normallynormal.void_water.Config;
 import com.normallynormal.void_water.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
@@ -18,6 +19,9 @@ public class ServerGamePacketListenerImplMixin {
     private boolean clientIsFloating;
 
     @Shadow
+    private int aboveGroundTickCount;
+
+    @Shadow
     private ServerPlayer player;
 
     @Inject(method = "handleMovePlayer", at = @At("TAIL"))
@@ -33,13 +37,14 @@ public class ServerGamePacketListenerImplMixin {
 
         BlockPos.MutableBlockPos mutableBlockPos = new BlockPos.MutableBlockPos();
 
-        if (entityTop < minY) {
+        if (entityTop < minY && entityTop > minY - Config.trailLength) {
             for (int x = entityMinX; x < entityMaxX; x++) {
                 for (int z = entityMinZ; z < entityMaxZ; z++) {
                     mutableBlockPos.set(x, minY, z);
                     boolean bottomFluid = player.level().getFluidState(mutableBlockPos).isEmpty();
                     if (this.clientIsFloating && !bottomFluid) {
                         this.clientIsFloating = false;
+                        this.aboveGroundTickCount = 0;
                     }
                 }
             }
