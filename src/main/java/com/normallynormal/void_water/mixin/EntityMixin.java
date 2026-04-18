@@ -53,7 +53,9 @@ public class EntityMixin {
             at = @At("RETURN")
     )
     private void modifyFluidPushing(boolean doFluidPushing, CallbackInfo ci) {
-        int levelFloor = Util.getMinYForLevel(this.level());
+        Level level = this.level();
+        if (level.isClientSide() && !ClientTrailData.serverHasMod) return;
+        int levelFloor = Util.getMinYForLevel(level);
         double entityTop = bb.maxY;
         int entityMinX = Mth.floor(bb.minX);
         int entityMaxX = Mth.ceil(bb.maxX);
@@ -72,7 +74,7 @@ public class EntityMixin {
                     int colTrailLength = getVoidTrailLength(x, z);
                     if (colTrailLength == 0 || entityTop <= levelFloor - colTrailLength) continue;
                     mutableBlockPos.set(x, levelFloor, z);
-                    FluidState fluidstate = this.level().getFluidState(mutableBlockPos);
+                    FluidState fluidstate = level.getFluidState(mutableBlockPos);
                     FluidType fluidType = fluidstate.getFluidType();
                     if (!fluidType.isAir() && fluidType.canPushEntity((Entity)(Object)this) && !fluidsIn.contains(fluidType)) {
                         double scale = ((IEntityExtension) this).getFluidMotionScale(fluidType);
@@ -89,6 +91,7 @@ public class EntityMixin {
     @Inject(method = "checkInsideBlocks", at = @At("RETURN"))
     private void onCheckInsideBlocks(List<?> blocks, InsideBlockEffectApplier.StepBasedCollector applier, CallbackInfo ci) {
         Level level = this.level();
+        if (level.isClientSide() && !ClientTrailData.serverHasMod) return;
         int minY = Util.getMinYForLevel(level);
         if (bb.maxY >= minY) return;
 

@@ -15,6 +15,7 @@ public class LevelMixin {
     @ModifyVariable(method = "getFluidState", at = @At("HEAD"))
     private BlockPos injected(BlockPos pos) {
         Level level = (Level)(Object) this;
+        if (level.isClientSide() && !ClientTrailData.serverHasMod) return pos;
         int minY = Util.getMinYForLevel(level);
         if (pos.getY() < minY) {
             int trailLength;

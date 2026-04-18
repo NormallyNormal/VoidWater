@@ -53,6 +53,7 @@ public class VoidWaterMod
 
     private void registerPayloads(final RegisterPayloadHandlersEvent event) {
         event.registrar("1")
+            .optional()
             .playToClient(VoidTrailSyncPacket.TYPE, VoidTrailSyncPacket.STREAM_CODEC, VoidTrailSyncPacket::handle);
     }
 
