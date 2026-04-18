@@ -16,6 +16,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(VoidWaterMod.MODID)
@@ -32,6 +33,7 @@ public class VoidWaterMod
     {
         // Register the commonSetup method for modloading
         modEventBus.addListener(this::commonSetup);
+        modEventBus.addListener(this::registerPayloads);
 
         // Register ourselves for server and other game events we are interested in.
         // Note that this is necessary if and only if we want *this* class (ExampleMod) to respond directly to events.
@@ -47,6 +49,11 @@ public class VoidWaterMod
 
     private void commonSetup(final FMLCommonSetupEvent event)
     {
+    }
+
+    private void registerPayloads(final RegisterPayloadHandlersEvent event) {
+        event.registrar("1")
+            .playToClient(VoidTrailSyncPacket.TYPE, VoidTrailSyncPacket.STREAM_CODEC, VoidTrailSyncPacket::handle);
     }
 
     // Add the example block item to the building blocks tab

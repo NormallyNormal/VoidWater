@@ -1,12 +1,13 @@
 package com.normallynormal.void_water.mixin;
 
-import com.normallynormal.void_water.Config;
-import com.normallynormal.void_water.InterimCalculation;
+import com.normallynormal.void_water.ClientTrailData;
 import com.normallynormal.void_water.Util;
+import com.normallynormal.void_water.VoidTrailData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.InsideBlockEffectApplier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.AABB;
@@ -14,18 +15,15 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.extensions.IEntityExtension;
 import net.neoforged.neoforge.fluids.FluidType;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.lang.reflect.Field;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 
 @Mixin(Entity.class)
 public class EntityMixin {
@@ -68,12 +66,14 @@ public class EntityMixin {
 
         Set<FluidType> fluidsIn = new HashSet<>();
 
-        if (entityTop < levelFloor && entityTop > levelFloor - Config.trailLength) {
+        if (entityTop < levelFloor) {
             for (int x = entityMinX; x < entityMaxX; x++) {
                 for (int z = entityMinZ; z < entityMaxZ; z++) {
+                    int colTrailLength = getVoidTrailLength(x, z);
+                    if (colTrailLength == 0 || entityTop <= levelFloor - colTrailLength) continue;
                     mutableBlockPos.set(x, levelFloor, z);
                     FluidState fluidstate = this.level().getFluidState(mutableBlockPos);
-                    net.neoforged.neoforge.fluids.FluidType fluidType = fluidstate.getFluidType();
+                    FluidType fluidType = fluidstate.getFluidType();
                     if (!fluidType.isAir() && fluidType.canPushEntity((Entity)(Object)this) && !fluidsIn.contains(fluidType)) {
                         double scale = ((IEntityExtension) this).getFluidMotionScale(fluidType);
                         modifiedFlowVector = modifiedFlowVector.add(0, -scale, 0);
@@ -86,12 +86,52 @@ public class EntityMixin {
         }
     }
 
+    @Inject(method = "checkInsideBlocks", at = @At("RETURN"))
+    private void onCheckInsideBlocks(List<?> blocks, InsideBlockEffectApplier.StepBasedCollector applier, CallbackInfo ci) {
+        Level level = this.level();
+        int minY = Util.getMinYForLevel(level);
+        if (bb.maxY >= minY) return;
+
+        int entityMinX = Mth.floor(bb.minX);
+        int entityMaxX = Mth.ceil(bb.maxX);
+        int entityMinZ = Mth.floor(bb.minZ);
+        int entityMaxZ = Mth.ceil(bb.maxZ);
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
+        Set<FluidType> processed = new HashSet<>();
+
+        for (int x = entityMinX; x < entityMaxX; x++) {
+            for (int z = entityMinZ; z < entityMaxZ; z++) {
+                int trailLength = getVoidTrailLength(x, z);
+                if (trailLength == 0 || bb.maxY <= minY - trailLength) continue;
+                mutablePos.set(x, minY, z);
+                FluidState fs = level.getFluidState(mutablePos);
+                if (!fs.isEmpty() && processed.add(fs.getFluidType())) {
+                    fs.entityInside(level, mutablePos.immutable(), (Entity)(Object)this, applier);
+                }
+            }
+        }
+    }
+
     @ModifyVariable(method = "updateFluidOnEyes()V", at = @At("STORE"), ordinal = 0)
     private double modifyD0(double d0) {
         int minY = Util.getMinYForLevel(this.level());
-        if (d0 < minY && d0 > minY - Config.trailLength) {
-            return minY + 0.01;
+        if (d0 < minY) {
+            int trailLength = getVoidTrailLength(blockPosition.getX(), blockPosition.getZ());
+            if (trailLength > 0 && d0 > minY - trailLength) {
+                return minY + 0.01;
+            }
         }
         return d0;
+    }
+
+    private int getVoidTrailLength(int x, int z) {
+        Level level = this.level();
+        if (level instanceof ServerLevel serverLevel) {
+            return VoidTrailData.getOrCreate(serverLevel)
+                .getTrailLengths()
+                .getOrDefault(VoidTrailData.pack(x, z), 0);
+        } else {
+            return ClientTrailData.getTrailLength(new BlockPos(x, 0, z));
+        }
     }
 }

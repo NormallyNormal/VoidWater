@@ -1,6 +1,7 @@
 package com.normallynormal.void_water.mixin;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.normallynormal.void_water.ClientTrailData;
 import com.normallynormal.void_water.Config;
 import com.normallynormal.void_water.SectionCompileContext;
 import com.normallynormal.void_water.Util;
@@ -21,9 +22,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import static net.minecraft.client.renderer.block.LiquidBlockRenderer.shouldRenderFace;
 
@@ -52,7 +51,7 @@ public abstract class LiquidBlockRendererMixin {
             BlockState blockState,
             FluidState fluidState
     ) {
-        if (pos.getY() == Util.getMinYForLevel()) {
+        if (pos.getY() == Util.getMinYForLevel() && ClientTrailData.getTrailLength(pos) > 0) {
             return false;
         }
         return originalFlag2;
@@ -61,118 +60,136 @@ public abstract class LiquidBlockRendererMixin {
     @Inject(method = "tesselate", at = @At("HEAD"))
     private void onTesselate(BlockAndTintGetter level, BlockPos pos, VertexConsumer buffer, BlockState blockState, FluidState fluidState, CallbackInfo ci) {
         int minY = Util.getMinYForLevel();
-        if (pos.getY() == minY) {
+        int trailLength = ClientTrailData.getTrailLength(pos);
+        if (pos.getY() == minY && trailLength > 0) {
             VertexConsumer trailBuffer = SectionCompileContext.getOrCreateTranslucentBuffer();
             if (trailBuffer == null) trailBuffer = buffer;
 
-            TextureAtlasSprite[] atextureatlassprite = FluidSpriteCache.getFluidSprites(level, pos, fluidState);
-            TextureAtlasSprite textureatlassprite2 = atextureatlassprite[1];
+            TextureAtlasSprite[] sprites = FluidSpriteCache.getFluidSprites(level, pos, fluidState);
+            TextureAtlasSprite sideSprite = sprites[1];
             int tintColor = net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions.of(fluidState).getTintColor(fluidState, level, pos);
             float alpha = (float)(tintColor >> 24 & 255) / 255.0F;
-            float red = (float)(tintColor >> 16 & 0xFF) / 255.0F;
-            float green = (float)(tintColor >> 8 & 0xFF) / 255.0F;
-            float blue = (float)(tintColor & 0xFF) / 255.0F;
-            float upShade = level.getShade(Direction.UP, true);
+            float red   = (float)(tintColor >> 16 & 0xFF) / 255.0F;
+            float green = (float)(tintColor >> 8  & 0xFF) / 255.0F;
+            float blue  = (float)(tintColor        & 0xFF) / 255.0F;
+            float upShade    = level.getShade(Direction.UP,    true);
+            float downShade  = level.getShade(Direction.DOWN,  true);
             float northShade = level.getShade(Direction.NORTH, true);
-            float westShade = level.getShade(Direction.WEST, true);
-            Fluid fluid = fluidState.getType();
-            BlockState blockstate2 = level.getBlockState(pos.relative(Direction.NORTH));
-            FluidState fluidstate2 = blockstate2.getFluidState();
-            BlockState blockstate3 = level.getBlockState(pos.relative(Direction.SOUTH));
-            FluidState fluidstate3 = blockstate3.getFluidState();
-            BlockState blockstate4 = level.getBlockState(pos.relative(Direction.WEST));
-            FluidState fluidstate4 = blockstate4.getFluidState();
-            BlockState blockstate5 = level.getBlockState(pos.relative(Direction.EAST));
-            FluidState fluidstate5 = blockstate5.getFluidState();
-            boolean flag3 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.NORTH, fluidstate2);
-            boolean flag4 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.SOUTH, fluidstate3);
-            boolean flag5 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.WEST, fluidstate4);
-            boolean flag6 = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.EAST, fluidstate5);
-            float f36 = (float)(pos.getX() & 15);
-            float f37 = (float)(pos.getY() & 15);
-            float f38 = (float)(pos.getZ() & 15);
-            int j = this.getLightColor(level, pos);
+            float westShade  = level.getShade(Direction.WEST,  true);
+            FluidState northFluid = level.getBlockState(pos.relative(Direction.NORTH)).getFluidState();
+            FluidState southFluid = level.getBlockState(pos.relative(Direction.SOUTH)).getFluidState();
+            FluidState westFluid  = level.getBlockState(pos.relative(Direction.WEST)).getFluidState();
+            FluidState eastFluid  = level.getBlockState(pos.relative(Direction.EAST)).getFluidState();
+            boolean renderNorth = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.NORTH, northFluid);
+            boolean renderSouth = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.SOUTH, southFluid);
+            boolean renderWest  = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.WEST,  westFluid);
+            boolean renderEast  = LiquidBlockRenderer.shouldRenderFace(fluidState, blockState, Direction.EAST,  eastFluid);
+            float localX = (float)(pos.getX() & 15);
+            float localY = (float)(pos.getY() & 15);
+            float localZ = (float)(pos.getZ() & 15);
+            int light = this.getLightColor(level, pos);
+
+            int trailNorth = ClientTrailData.getTrailLength(pos.relative(Direction.NORTH));
+            int trailSouth = ClientTrailData.getTrailLength(pos.relative(Direction.SOUTH));
+            int trailWest  = ClientTrailData.getTrailLength(pos.relative(Direction.WEST));
+            int trailEast  = ClientTrailData.getTrailLength(pos.relative(Direction.EAST));
 
             for (Direction direction : Direction.Plane.HORIZONTAL) {
-                float f47;
-                float f49;
-                float f51;
-                float f52;
+                float x1, x2, z1, z2;
                 float nx, ny, nz;
-                boolean flag7;
+                boolean renderAtMinY;
+                int neighborTrail;
                 switch (direction) {
                     case NORTH:
-                        f47 = f36;
-                        f51 = f36 + 1.0F;
-                        f49 = f38 + 0.001F;
-                        f52 = f38 + 0.001F;
+                        x1 = localX;       x2 = localX + 1.0F;
+                        z1 = localZ + 0.001F; z2 = localZ + 0.001F;
                         nx = 0; ny = 0; nz = -1;
-                        flag7 = flag3;
+                        renderAtMinY = renderNorth; neighborTrail = trailNorth;
                         break;
                     case SOUTH:
-                        f47 = f36 + 1.0F;
-                        f51 = f36;
-                        f49 = f38 + 1.0F - 0.001F;
-                        f52 = f38 + 1.0F - 0.001F;
+                        x1 = localX + 1.0F; x2 = localX;
+                        z1 = localZ + 1.0F - 0.001F; z2 = localZ + 1.0F - 0.001F;
                         nx = 0; ny = 0; nz = 1;
-                        flag7 = flag4;
+                        renderAtMinY = renderSouth; neighborTrail = trailSouth;
                         break;
                     case WEST:
-                        f47 = f36 + 0.001F;
-                        f51 = f36 + 0.001F;
-                        f49 = f38 + 1.0F;
-                        f52 = f38;
+                        x1 = localX + 0.001F; x2 = localX + 0.001F;
+                        z1 = localZ + 1.0F;   z2 = localZ;
                         nx = -1; ny = 0; nz = 0;
-                        flag7 = flag5;
+                        renderAtMinY = renderWest; neighborTrail = trailWest;
                         break;
                     default:
-                        f47 = f36 + 1.0F - 0.001F;
-                        f51 = f36 + 1.0F - 0.001F;
-                        f49 = f38;
-                        f52 = f38 + 1.0F;
+                        x1 = localX + 1.0F - 0.001F; x2 = localX + 1.0F - 0.001F;
+                        z1 = localZ;       z2 = localZ + 1.0F;
                         nx = 1; ny = 0; nz = 0;
-                        flag7 = flag6;
+                        renderAtMinY = renderEast; neighborTrail = trailEast;
                 }
-                if (flag7) {
-                    BlockPos blockpos = pos.relative(direction);
-                    if (atextureatlassprite[2] != null) {
-                        if (level.getBlockState(blockpos).shouldDisplayFluidOverlay(level, blockpos, fluidState)) {
-                            textureatlassprite2 = atextureatlassprite[2];
+                if (renderAtMinY) {
+                    BlockPos neighborPos = pos.relative(direction);
+                    if (sprites[2] != null) {
+                        if (level.getBlockState(neighborPos).shouldDisplayFluidOverlay(level, neighborPos, fluidState)) {
+                            sideSprite = sprites[2];
                         }
                     }
-                    float renderalpha = alpha;
-                    for (int yval = -1; yval >= -Config.trailLength; yval--) {
-                        float nextrenderalpha = alpha * (1 - ((float) (yval - 1) / -Config.trailLength));
-                        nextrenderalpha = (float) Math.pow(nextrenderalpha, Config.trailDecay);
+                }
+                float topAlpha = alpha;
+                for (int depth = 1; depth <= trailLength; depth++) {
+                    float bottomAlpha = alpha * (1 - ((float)(depth) / -(-Config.trailLength)));
+                    bottomAlpha = (float) Math.pow(bottomAlpha, Config.trailDecay);
 
-                        if (yval == -Config.trailLength - 1) {
-                            nextrenderalpha = 1;
-                        }
-
-                        float f56 = textureatlassprite2.getU(0.0F);
-                        float f58 = textureatlassprite2.getU(0.5F);
-                        float f59 = textureatlassprite2.getV(0.0F);
-                        float f31 = textureatlassprite2.getV(0.5F);
-
-                        float f32 = direction.getAxis() == Direction.Axis.Z ? northShade : westShade;
-                        float f33 = upShade * f32 * red;
-                        float f34 = upShade * f32 * green;
-                        float f35 = upShade * f32 * blue;
-
-                        this.vertex(trailBuffer, f47, f37 + 1 + yval + 0.001f, f49, f33, f34, f35, renderalpha, f56, f59, j, nx, ny, nz);
-                        this.vertex(trailBuffer, f51, f37 + 1 + yval + 0.001f, f52, f33, f34, f35, renderalpha, f58, f59, j, nx, ny, nz);
-                        this.vertex(trailBuffer, f51, f37 + yval + 0.001f, f52, f33, f34, f35, nextrenderalpha, f58, f31, j, nx, ny, nz);
-                        this.vertex(trailBuffer, f47, f37 + yval + 0.001f, f49, f33, f34, f35, nextrenderalpha, f56, f31, j, nx, ny, nz);
-
-                        this.vertex(trailBuffer, f47, f37 + yval + 0.001f, f49, f33, f34, f35, nextrenderalpha, f56, f31, j, -nx, -ny, -nz);
-                        this.vertex(trailBuffer, f51, f37 + yval + 0.001f, f52, f33, f34, f35, nextrenderalpha, f58, f31, j, -nx, -ny, -nz);
-                        this.vertex(trailBuffer, f51, f37 + 1 + yval + 0.001f, f52, f33, f34, f35, renderalpha, f58, f59, j, -nx, -ny, -nz);
-                        this.vertex(trailBuffer, f47, f37 + 1 + yval + 0.001f, f49, f33, f34, f35, renderalpha, f56, f59, j, -nx, -ny, -nz);
-
-                        renderalpha = nextrenderalpha;
+                    if (depth == Config.trailLength + 1) {
+                        bottomAlpha = 1;
                     }
+
+                    if (renderAtMinY || neighborTrail < depth) {
+                        float u0 = sideSprite.getU(0.0F);
+                        float u1 = sideSprite.getU(0.5F);
+                        float v0 = sideSprite.getV(0.0F);
+                        float v1 = sideSprite.getV(0.5F);
+
+                        float faceShade  = direction.getAxis() == Direction.Axis.Z ? northShade : westShade;
+                        float shadedRed   = upShade * faceShade * red;
+                        float shadedGreen = upShade * faceShade * green;
+                        float shadedBlue  = upShade * faceShade * blue;
+
+                        float yTop    = localY + 1 - depth + 0.001f;
+                        float yBottom = localY     - depth + 0.001f;
+
+                        this.vertex(trailBuffer, x1, yTop,    z1, shadedRed, shadedGreen, shadedBlue, topAlpha,    u0, v0, light, nx,  ny,  nz);
+                        this.vertex(trailBuffer, x2, yTop,    z2, shadedRed, shadedGreen, shadedBlue, topAlpha,    u1, v0, light, nx,  ny,  nz);
+                        this.vertex(trailBuffer, x2, yBottom, z2, shadedRed, shadedGreen, shadedBlue, bottomAlpha, u1, v1, light, nx,  ny,  nz);
+                        this.vertex(trailBuffer, x1, yBottom, z1, shadedRed, shadedGreen, shadedBlue, bottomAlpha, u0, v1, light, nx,  ny,  nz);
+
+                        this.vertex(trailBuffer, x1, yBottom, z1, shadedRed, shadedGreen, shadedBlue, bottomAlpha, u0, v1, light, -nx, -ny, -nz);
+                        this.vertex(trailBuffer, x2, yBottom, z2, shadedRed, shadedGreen, shadedBlue, bottomAlpha, u1, v1, light, -nx, -ny, -nz);
+                        this.vertex(trailBuffer, x2, yTop,    z2, shadedRed, shadedGreen, shadedBlue, topAlpha,    u1, v0, light, -nx, -ny, -nz);
+                        this.vertex(trailBuffer, x1, yTop,    z1, shadedRed, shadedGreen, shadedBlue, topAlpha,    u0, v0, light, -nx, -ny, -nz);
+                    }
+
+                    topAlpha = bottomAlpha;
                 }
             }
+
+            // Bottom cap at the tip of the visible trail
+            float capAlpha = (float) Math.pow(
+                alpha * (1 - ((float)(trailLength) / -(-Config.trailLength))),
+                Config.trailDecay
+            );
+            TextureAtlasSprite capSprite = sprites[0];
+            float cu0 = capSprite.getU(0.0F), cu1 = capSprite.getU(1.0F);
+            float cv0 = capSprite.getV(0.0F), cv1 = capSprite.getV(1.0F);
+            float capY = localY - trailLength + 0.001f;
+            float capRed = downShade * red, capGreen = downShade * green, capBlue = downShade * blue;
+
+            this.vertex(trailBuffer, localX,       capY, localZ + 1, capRed, capGreen, capBlue, capAlpha, cu0, cv1, light, 0, -1, 0);
+            this.vertex(trailBuffer, localX,       capY, localZ,     capRed, capGreen, capBlue, capAlpha, cu0, cv0, light, 0, -1, 0);
+            this.vertex(trailBuffer, localX + 1,   capY, localZ,     capRed, capGreen, capBlue, capAlpha, cu1, cv0, light, 0, -1, 0);
+            this.vertex(trailBuffer, localX + 1,   capY, localZ + 1, capRed, capGreen, capBlue, capAlpha, cu1, cv1, light, 0, -1, 0);
+
+            this.vertex(trailBuffer, localX + 1,   capY, localZ + 1, capRed, capGreen, capBlue, capAlpha, cu1, cv1, light, 0, 1, 0);
+            this.vertex(trailBuffer, localX + 1,   capY, localZ,     capRed, capGreen, capBlue, capAlpha, cu1, cv0, light, 0, 1, 0);
+            this.vertex(trailBuffer, localX,       capY, localZ,     capRed, capGreen, capBlue, capAlpha, cu0, cv0, light, 0, 1, 0);
+            this.vertex(trailBuffer, localX,       capY, localZ + 1, capRed, capGreen, capBlue, capAlpha, cu0, cv1, light, 0, 1, 0);
         }
     }
 
