@@ -51,10 +51,10 @@ public class EntityMixin {
     private AABB bb;
 
     @Inject(
-            method = "updateFluidHeightAndDoFluidPushing()V",
+            method = "updateFluidHeightAndDoFluidPushing(Z)V",
             at = @At("RETURN")
     )
-    private void modifyFluidPushing(CallbackInfo ci) {
+    private void modifyFluidPushing(boolean doFluidPushing, CallbackInfo ci) {
         int levelFloor = Util.getMinYForLevel(this.level());
         double entityTop = bb.maxY;
         int entityMinX = Mth.floor(bb.minX);

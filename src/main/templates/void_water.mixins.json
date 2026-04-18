@@ -10,7 +10,7 @@
   ],
   "client": [
     "LiquidBlockRendererMixin",
-    "ItemBlockRenderTypesMixin",
+    "SectionCompilerMixin",
     "SectionRendererDispatcherMixin",
     "SectionOcclusionGraphMixin",
     "FrustumMixin"

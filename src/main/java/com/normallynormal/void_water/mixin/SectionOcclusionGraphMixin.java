@@ -1,5 +1,6 @@
 package com.normallynormal.void_water.mixin;
 
+import com.normallynormal.void_water.Util;
 import net.minecraft.client.renderer.SectionOcclusionGraph;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.world.phys.AABB;
@@ -17,6 +18,6 @@ public class SectionOcclusionGraphMixin {
             )
     )
     private boolean ignoreFrustum(Frustum frustum, AABB bb) {
-        return true;
+        return bb.minY <= Util.getMinYForLevel() || frustum.isVisible(bb);
     }
 }

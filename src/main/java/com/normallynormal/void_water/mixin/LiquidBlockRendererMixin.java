@@ -2,6 +2,7 @@ package com.normallynormal.void_water.mixin;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.normallynormal.void_water.Config;
+import com.normallynormal.void_water.SectionCompileContext;
 import com.normallynormal.void_water.Util;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.block.LiquidBlockRenderer;
@@ -40,7 +41,7 @@ public abstract class LiquidBlockRendererMixin {
     @ModifyVariable(
             method = "tesselate",
             at = @At(value = "STORE"),
-            ordinal = 2,
+            ordinal = 1,
             require = 1
     )
     private boolean modifyFlag2(
@@ -61,6 +62,9 @@ public abstract class LiquidBlockRendererMixin {
     private void onTesselate(BlockAndTintGetter level, BlockPos pos, VertexConsumer buffer, BlockState blockState, FluidState fluidState, CallbackInfo ci) {
         int minY = Util.getMinYForLevel();
         if (pos.getY() == minY) {
+            VertexConsumer trailBuffer = SectionCompileContext.getOrCreateTranslucentBuffer();
+            if (trailBuffer == null) trailBuffer = buffer;
+
             TextureAtlasSprite[] atextureatlassprite = FluidSpriteCache.getFluidSprites(level, pos, fluidState);
             TextureAtlasSprite textureatlassprite2 = atextureatlassprite[1];
             int tintColor = net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions.of(fluidState).getTintColor(fluidState, level, pos);
@@ -94,6 +98,7 @@ public abstract class LiquidBlockRendererMixin {
                 float f49;
                 float f51;
                 float f52;
+                float nx, ny, nz;
                 boolean flag7;
                 switch (direction) {
                     case NORTH:
@@ -101,6 +106,7 @@ public abstract class LiquidBlockRendererMixin {
                         f51 = f36 + 1.0F;
                         f49 = f38 + 0.001F;
                         f52 = f38 + 0.001F;
+                        nx = 0; ny = 0; nz = -1;
                         flag7 = flag3;
                         break;
                     case SOUTH:
@@ -108,6 +114,7 @@ public abstract class LiquidBlockRendererMixin {
                         f51 = f36;
                         f49 = f38 + 1.0F - 0.001F;
                         f52 = f38 + 1.0F - 0.001F;
+                        nx = 0; ny = 0; nz = 1;
                         flag7 = flag4;
                         break;
                     case WEST:
@@ -115,6 +122,7 @@ public abstract class LiquidBlockRendererMixin {
                         f51 = f36 + 0.001F;
                         f49 = f38 + 1.0F;
                         f52 = f38;
+                        nx = -1; ny = 0; nz = 0;
                         flag7 = flag5;
                         break;
                     default:
@@ -122,6 +130,7 @@ public abstract class LiquidBlockRendererMixin {
                         f51 = f36 + 1.0F - 0.001F;
                         f49 = f38;
                         f52 = f38 + 1.0F;
+                        nx = 1; ny = 0; nz = 0;
                         flag7 = flag6;
                 }
                 if (flag7) {
@@ -150,17 +159,15 @@ public abstract class LiquidBlockRendererMixin {
                         float f34 = upShade * f32 * green;
                         float f35 = upShade * f32 * blue;
 
-                        this.vertex(buffer, f47, f37 + 1 + yval + 0.001f, f49, f33, f34, f35, renderalpha, f56, f59, j);
-                        this.vertex(buffer, f51, f37 + 1 + yval + 0.001f, f52, f33, f34, f35, renderalpha, f58, f59, j);
-                        this.vertex(buffer, f51, f37 + yval + 0.001f, f52, f33, f34, f35, nextrenderalpha, f58, f31, j);
-                        this.vertex(buffer, f47, f37 + yval + 0.001f, f49, f33, f34, f35, nextrenderalpha, f56, f31, j);
+                        this.vertex(trailBuffer, f47, f37 + 1 + yval + 0.001f, f49, f33, f34, f35, renderalpha, f56, f59, j, nx, ny, nz);
+                        this.vertex(trailBuffer, f51, f37 + 1 + yval + 0.001f, f52, f33, f34, f35, renderalpha, f58, f59, j, nx, ny, nz);
+                        this.vertex(trailBuffer, f51, f37 + yval + 0.001f, f52, f33, f34, f35, nextrenderalpha, f58, f31, j, nx, ny, nz);
+                        this.vertex(trailBuffer, f47, f37 + yval + 0.001f, f49, f33, f34, f35, nextrenderalpha, f56, f31, j, nx, ny, nz);
 
-                        if (textureatlassprite2 != atextureatlassprite[2]) {
-                            this.vertex(buffer, f47, f37 + yval + 0.001f, f49, f33, f34, f35, nextrenderalpha, f56, f31, j);
-                            this.vertex(buffer, f51, f37 + yval + 0.001f, f52, f33, f34, f35, nextrenderalpha, f58, f31, j);
-                            this.vertex(buffer, f51, f37 + 1 + yval + 0.001f, f52, f33, f34, f35, renderalpha, f58, f59, j);
-                            this.vertex(buffer, f47, f37 + 1 + yval + 0.001f, f49, f33, f34, f35, renderalpha, f56, f59, j);
-                        }
+                        this.vertex(trailBuffer, f47, f37 + yval + 0.001f, f49, f33, f34, f35, nextrenderalpha, f56, f31, j, -nx, -ny, -nz);
+                        this.vertex(trailBuffer, f51, f37 + yval + 0.001f, f52, f33, f34, f35, nextrenderalpha, f58, f31, j, -nx, -ny, -nz);
+                        this.vertex(trailBuffer, f51, f37 + 1 + yval + 0.001f, f52, f33, f34, f35, renderalpha, f58, f59, j, -nx, -ny, -nz);
+                        this.vertex(trailBuffer, f47, f37 + 1 + yval + 0.001f, f49, f33, f34, f35, renderalpha, f56, f59, j, -nx, -ny, -nz);
 
                         renderalpha = nextrenderalpha;
                     }
@@ -171,22 +178,17 @@ public abstract class LiquidBlockRendererMixin {
 
     private void vertex(
             VertexConsumer vertexConsumer,
-            float x,
-            float y,
-            float z,
-            float red,
-            float green,
-            float blue,
-            float alpha,
-            float u,
-            float v,
-            int light
+            float x, float y, float z,
+            float red, float green, float blue, float alpha,
+            float u, float v,
+            int light,
+            float nx, float ny, float nz
     ) {
         vertexConsumer.addVertex(x, y, z)
                 .setColor(red, green, blue, alpha)
                 .setUv(u, v)
                 .setLight(light)
-                .setNormal(0.0F, 1.0F, 0.0F);
+                .setNormal(nx, ny, nz);
     }
 
     private static boolean isNeighborSameFluid(FluidState firstState, FluidState secondState) {
@@ -197,7 +199,7 @@ public abstract class LiquidBlockRendererMixin {
         if (state.canOcclude()) {
             VoxelShape voxelshape = Shapes.box(0.0, 0.0, 0.0, 1.0, (double)height, 1.0);
             VoxelShape voxelshape1 = state.getOcclusionShape();
-            return Shapes.blockOccudes(voxelshape, voxelshape1, face);
+            return Shapes.blockOccludes(voxelshape, voxelshape1, face);
         } else {
             return false;
         }
